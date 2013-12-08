@@ -1,6 +1,6 @@
 var io = require('socket.io-client');
 var systemDate = new Date();
-var msg = systemDate.getHours() + ":" + systemDate.getMinutes() + ":" + systemDate.getSeconds() + " Hello!";
+var msg = systemDate.getHours() + ':' + systemDate.getMinutes() + ':' + systemDate.getSeconds() + ' Hello!';
 
 var socket = io.connect('http://localhost:8080/chat/1010?id=1010');
 

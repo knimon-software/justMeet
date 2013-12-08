@@ -9,7 +9,7 @@ io.configure(function (){
             socket.emit('initMsg','welcome');
             socket.on('MsgEvent',function(msg){
                console.log('recvMessage : ' + msg);
-               io.of('/chat/' + id).emit('bcMsg',"Hello" + msg);
+               io.of('/chat/' + id).emit('bcMsg','Hello' + msg);
             });
          });
       }
