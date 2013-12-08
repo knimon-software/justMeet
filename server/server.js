@@ -18,6 +18,7 @@ io.configure(function (){
    });
 });
 
-io.of('/createRoom').on('connection',function(){
+
+io.of('/createRoom').on('connection',function(socket){
    socket.emit('roomNum','12345');
 });
