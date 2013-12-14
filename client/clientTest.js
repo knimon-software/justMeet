@@ -2,7 +2,7 @@ var io = require('socket.io-client');
 var systemDate = new Date();
 var msg = systemDate.getHours() + ':' + systemDate.getMinutes() + ':' + systemDate.getSeconds() + ' Hello!';
 
-var socket = io.connect('http://localhost:8080/chat/1010?id=1010');
+var socket = io.connect('http://localhost:8080/createRoom');
 
 socket.on('connect',function(){
    console.log('connected...');
@@ -15,5 +15,9 @@ socket.on('bcMsg',function(data){
 });
 
 socket.on('initMsg',function(data){
+   console.log('recvMessage : ' + data);
+});
+
+socket.on('roomID',function(data){
    console.log('recvMessage : ' + data);
 });
