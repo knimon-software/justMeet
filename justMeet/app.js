@@ -81,18 +81,22 @@ app.get('/room',isLogined,function(req,res){
    //res user profile
    res.render('room',{
       userName : req.user.displayName,
-      userImage : req.user.photos[0].value
+      userImage : req.user.photos[0].value,
    });
 });
 
-app.get('/room/:id',function(req,res){
-  //初回にidつきでアクセスしてきた場合には、ログイン後当該ページへリダイレクトする 
-}
 //check authenticated
 function isLogined(req,res,next){
+   //アクセス時にroomidが付加されている場合はクッキーに保存する
+   if(req.query.id){
+      res.cookie('id',req.query.id);
+   }
+
    if(req.isAuthenticated()){
+      console.log('authenticated');
       return next();
    }
+
    res.redirect('/');
 }
 
@@ -103,19 +107,30 @@ server.listen(app.get('port'),function(){
 
 //socket.io configuration
 var io = require('socket.io').listen(server);
-var parseCookie = require('connect').utils.parseCookie;
+var parseSignedCookie = require('connect').utils.parseSignedCookie;
+var cookie            = require('express/node_modules/cookie');
 
+//クライアントからアクセスされてきたときにhandshakeDataにルームIDをセットするため処理
 // /room?idでアクセスしてきた場合にはidのnamespaceを作成(存在しなければ。)
-io.of('/room').authorization(function(handshakeData,callback){
-   var id = handshake.query.id;
-   console.log('clientConnected id = ' + id);
+var Loby = io.of('/room').authorization(function(handshakeData,callback){
+
+   if(handshakeData.query.id){
+      var id = handshakeData.query.id;
+   }else{
+      //指定がなければIDを作成
+      var id = generateHashString(handshakeData);
+   }
+
+   handshakeData.roomId=id;
+   console.log('authenticated: ' + handshakeData.roomId);
 
    if(!io.namespaces.hasOwnProperty('/room/' + id )){
       //createRoom & shared session
       var instantRoom = io.of('/room/' + id).authorization(function(handshakeData,callback){
          if(handshakeData.headers.cookie){
             var cookie = handshakeData.headers.cookie;
-            var sessionID = parseCookie(cookie)['connect.sid'];
+            console.log(cookie);
+            var sessionID = parseSignedCookie(cookie['connect.sid'],'secretKey');
 
             //get session from sessionStorage
             sessionStore.get(sessionID,function(err,session){
@@ -132,10 +147,31 @@ io.of('/room').authorization(function(handshakeData,callback){
          }
       });
 
+
       instantRoom.on('connection',function(socket){
-         socket.emit('msg','hello');
+         //main Logic
+         socket.on('msg',function(msgData){
+            socket.emit('msg',msgData);
+         });
       });
    }
-      callback(null,true);
+
+   callback(null,true);
 });
 
+Loby.on('connection',function(socket){
+   console.log('handshakedata : ' + socket.handshake);
+   socket.emit('roomId',socket.handshake.roomId);
+});
+
+/*generate Hash String from Current Date + HandShake Data */
+function generateHashString(handshake){
+   var currentDate = new Date();
+   var dateString = "" + currentDate.getFullYear()  + currentDate.getMonth() + currentDate.getDate();
+   dateString += "" + currentDate.getHours() + currentDate.getMinutes() + currentDate.getMilliseconds();
+   var sha1 = require('crypto').createHash('sha1');
+
+   sha1.update(dateString + handshake.address.address);
+
+   return sha1.digest('hex');
+}
