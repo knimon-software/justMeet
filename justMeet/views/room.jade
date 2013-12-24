@@ -2,8 +2,21 @@ extends layout
 
 block content
    h1= title
-   p Welcome to #{title}
+   p#welcome Welcome to #{title}
 
-   <img src=#{userImage}>
-   p #{userName}
+   div.media
+      a.pull-left(href="#")
+         img.media-object(src="#{userImage}")
+      div.media-body
+         h4 #{userName}
+   br
+   form
+      input#textArea(name="chat", type="text")
+      input#btn(type="button", value="sbumit")
    
+   br
+
+   div.well#msgList(style="overflow:scroll; height:300px")
+
+   script(src="/socket.io/socket.io.js")
+   script(src="/javascripts/room.js")

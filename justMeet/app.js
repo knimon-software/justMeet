@@ -51,6 +51,7 @@ app.configure(function(){
    app.use(express.methodOverride());
    //session configuration
    app.use(express.cookieParser());
+   //app.use(express.cookieParser("secret"));
    app.use(express.session({
       secret: "secretKey",
       store: sessionStore
@@ -85,15 +86,14 @@ app.get('/room',isLogined,function(req,res){
    });
 });
 
-//check authenticated
+/* check authenticated */
 function isLogined(req,res,next){
    //アクセス時にroomidが付加されている場合はクッキーに保存する
    if(req.query.id){
-      res.cookie('id',req.query.id);
+      res.cookie('id',req.query.id);//,{signed : true});
    }
 
    if(req.isAuthenticated()){
-      console.log('authenticated');
       return next();
    }
 
@@ -106,52 +106,45 @@ server.listen(app.get('port'),function(){
 });
 
 //socket.io configuration
-var io = require('socket.io').listen(server);
-var parseSignedCookie = require('connect').utils.parseSignedCookie;
-var cookie            = require('express/node_modules/cookie');
+var io = require('socket.io').listen(server),
+    passportSocketIo = require('passport.socketio'),
+    cookie = require('cookie');
 
 //クライアントからアクセスされてきたときにhandshakeDataにルームIDをセットするため処理
-// /room?idでアクセスしてきた場合にはidのnamespaceを作成(存在しなければ。)
+//cookieにルームIDが設定されていなければ新規に部屋を作成
 var Loby = io.of('/room').authorization(function(handshakeData,callback){
 
-   if(handshakeData.query.id){
-      var id = handshakeData.query.id;
-   }else{
-      //指定がなければIDを作成
-      var id = generateHashString(handshakeData);
-   }
+   //指定がなければIDを作成
+   var id = cookie.parse(handshakeData.headers.cookie)['id'] || generateHashString(handshakeData);
 
    handshakeData.roomId=id;
    console.log('authenticated: ' + handshakeData.roomId);
 
    if(!io.namespaces.hasOwnProperty('/room/' + id )){
       //createRoom & shared session
-      var instantRoom = io.of('/room/' + id).authorization(function(handshakeData,callback){
-         if(handshakeData.headers.cookie){
-            var cookie = handshakeData.headers.cookie;
-            console.log(cookie);
-            var sessionID = parseSignedCookie(cookie['connect.sid'],'secretKey');
+      var instantRoom = io.of('/room/' + id).authorization(passportSocketIo.authorize({
+         cookieParser: express.cookieParser,
+         key:         'connect.sid',
+         secret:      'secretKey',
+         store:       sessionStore,
+         success:     function(data,accept){
+            accept(null,true);
+         },
+         fail:        function(data, message, error, accept){
+            if(error)
+               throw new Error(message);
 
-            //get session from sessionStorage
-            sessionStore.get(sessionID,function(err,session){
-               if(err){
-                  callback(err.message,false);
-               }else{
-                  //authorized
-                  handshakeData.session = session;
-                  callback(null,true);
-               }
-            });
-         }else{
-            return callback('not found cookie',false);
+            console.log('failed connection to socket.io:', message);
+            accept(null, false);
          }
-      });
-
+      }));
 
       instantRoom.on('connection',function(socket){
          //main Logic
          socket.on('msg',function(msgData){
-            socket.emit('msg',msgData);
+            userData = socket.handshake.user;
+            socket.emit('msg',{ name : userData.displayName,image : userData.photos[0].value,msg : msgData });
+            console.log(msgData);
          });
       });
    }
@@ -160,7 +153,6 @@ var Loby = io.of('/room').authorization(function(handshakeData,callback){
 });
 
 Loby.on('connection',function(socket){
-   console.log('handshakedata : ' + socket.handshake);
    socket.emit('roomId',socket.handshake.roomId);
 });
 
