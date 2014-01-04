@@ -90,7 +90,7 @@ app.get('/room',isLogined,function(req,res){
 function isLogined(req,res,next){
    //アクセス時にroomidが付加されている場合はクッキーに保存する
    if(req.query.id){
-      res.cookie('id',req.query.id);//,{signed : true});
+      res.cookie('id',req.query.id);
    }
 
    if(req.isAuthenticated()){
@@ -143,7 +143,7 @@ var Loby = io.of('/room').authorization(function(handshakeData,callback){
          //main Logic
          socket.on('msg',function(msgData){
             userData = socket.handshake.user;
-            socket.emit('msg',{ name : userData.displayName,image : userData.photos[0].value,msg : msgData });
+            instantRoom.emit('msg',{ name : userData.displayName,image : userData.photos[0].value,msg : msgData });
             console.log(msgData);
          });
       });

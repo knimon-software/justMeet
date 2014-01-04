@@ -1,10 +1,11 @@
 var socket = io.connect('http://localhost:3000/room');
 var userName = '#{userName}';
 var userImage = '#{userImage}';
+var roomId;
 
 socket.on('connect',function(){
    socket.on('roomId',function(data){
-      var roomId = data;
+      roomId = data;
       var instanceRoom = io.connect('http://localhost:3000/room/' + roomId);
       instanceRoom.on('connect',function(){
          instanceRoom.on('msg',function(msgData){
@@ -17,9 +18,15 @@ socket.on('connect',function(){
          $('#textArea').val('').focus();
          instanceRoom.emit('msg',msg);
       }
+
+      $('#getRoomId').click(function(e){
+         //window.clipboardData.setData("URL",location.href+ '?id=' + roomId);
+         window.alert(location.href+ '?id=' + roomId);
+      });
+
       $('#btn').click(function(e){
          sendMessage();
-      })
+      });
 
       $('#textArea').keypress(function(e){
          if(e.which == 13){
@@ -31,7 +38,6 @@ socket.on('connect',function(){
 
 //発言内容を表示する
 function displayChat(name,image, msg) {
-   console.log('chat: from=' + name + ', msg=' + msg);
    var msgBox = $('<div>',{class : 'media'});
    var msgBody = $('<div>',{class : 'media-body'});
    msgBody.html("<h4>"+name+"</h4>"+msg);
