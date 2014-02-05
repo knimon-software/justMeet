@@ -1,26 +1,38 @@
 var socket = io.connect('http://localhost:3000/room');
-var userName = '#{userName}';
-var userImage = '#{userImage}';
+var locate = new LocationMapping();
 var roomId;
+
+/*show the googleMap*/
+locate.init();
 
 socket.on('connect',function(){
    socket.on('roomId',function(data){
       roomId = data;
       var instanceRoom = io.connect('http://localhost:3000/room/' + roomId);
       instanceRoom.on('connect',function(){
-         instanceRoom.on('msg',function(msgData){
+         instanceRoom.on('emit',function(msgData){
             displayChat(msgData.name,msgData.image,msgData.msg);
          });
+
+         instanceRoom.on('broadcast',function(msgData){
+            var pos = msgData.msg;
+            locate.setMarker(pos.lat,pos.lng,msgData.image,msgData.name);
+         });
+
       });
 
       function sendMessage(){
          var msg = $('#textArea').val();
          $('#textArea').val('').focus();
-         instanceRoom.emit('msg',msg);
+         instanceRoom.emit('emit',msg);
       }
 
+      setInterval(function(){ 
+         instanceRoom.emit('broadcast',{lat:locate.curPos.lat,lng:locate.curPos.lng,head:locate.curPos.head});
+      },3000);
+
+
       $('#getRoomId').click(function(e){
-         //window.clipboardData.setData("URL",location.href+ '?id=' + roomId);
          window.alert(location.href+ '?id=' + roomId);
       });
 
@@ -50,3 +62,4 @@ function displayChat(name,image, msg) {
    msgBox.append(msgBody);
    $('#msgList').prepend(msgBox);
 }
+

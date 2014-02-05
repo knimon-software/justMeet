@@ -141,11 +141,17 @@ var Loby = io.of('/room').authorization(function(handshakeData,callback){
 
       instantRoom.on('connection',function(socket){
          //main Logic
-         socket.on('msg',function(msgData){
+
+         socket.on('emit',function(msgData){
             userData = socket.handshake.user;
-            instantRoom.emit('msg',{ name : userData.displayName,image : userData.photos[0].value,msg : msgData });
-            console.log(msgData);
+            instantRoom.emit('emit',{ name : userData.displayName,image : userData.photos[0].value,msg : msgData });
          });
+
+         socket.on('broadcast',function(msgData){
+            userData = socket.handshake.user;
+            socket.broadcast.emit('broadcast',{ name : userData.displayName,image : userData.photos[0].value,msg : msgData });
+         });
+
       });
    }
 
